@@ -2,7 +2,7 @@
 **  Reduce noise by using Mean Filter with equal weights
 */
 
-__global__ void MeanFilter ( RGBA *dst, int imageW, int imageH, int radius )
+__global__ void MeanFilter ( uint *dst, int imageW, int imageH, int radius )
 {
     const int ix = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
     const int iy = __umul24(blockIdx.y, blockDim.y) + threadIdx.y;
@@ -36,7 +36,7 @@ __global__ void MeanFilter ( RGBA *dst, int imageW, int imageH, int radius )
     }
 }
 
-extern "C" void meanFilterWrapper (RGBA *dst, int imageW, int imageH, int radius) 
+extern "C" void meanFilterWrapper (uint *dst, int imageW, int imageH, int radius) 
 {
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);

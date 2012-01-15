@@ -13,6 +13,12 @@
 		/>
 	</Platforms>
 	<ToolFiles>
+		<DefaultToolFile
+			FileName="NvCudaRuntimeApi.rules"
+		/>
+		<DefaultToolFile
+			FileName="NvCudaRuntimeApi.v3.2.rules"
+		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -29,6 +35,9 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
+				Name="Cudart Build Rule"
+			/>
+			<Tool
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
@@ -40,9 +49,11 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="C:/SDL_image-1.2.10; $(CUDA_PATH)/include;./;../../common/inc;../../../shared/inc"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				WarningLevel="3"
 				DebugInformationFormat="4"
 			/>
@@ -57,6 +68,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/NODEFAULTLIB:&quot;libcpmt.lib&quot;  /NODEFAULTLIB:&quot;libcmt.lib&quot;"
+				AdditionalDependencies="SDL.lib SDLmain.lib SDL_image.lib cudart.lib cutil32D.lib shrUtils32D.lib glew32.lib "
+				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)\lib\$(PlatformName)&quot;;&quot;C:\Users\toshiba\AppData\Local\NVIDIA Corporation\NVIDIA GPU Computing SDK 3.2\shared\lib&quot;;&quot;C:\Users\toshiba\AppData\Local\NVIDIA Corporation\NVIDIA GPU Computing SDK 3.2\C\common\lib&quot;;&quot;C:\SDL\SDL_image-1.2.10\VisualC\Debug&quot;;&quot;C:\SDL\SDL-1.2.14\lib&quot;"
 				GenerateDebugInformation="true"
 				TargetMachine="1"
 			/>
@@ -95,6 +109,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -165,23 +182,90 @@
 				RelativePath=".\main.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\sdl_image_loader.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="includes"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\cudafunctions.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="cuda src"
 			Filter="cu"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
-		</Filter>
-		<Filter
-			Name="images"
-			Filter="png;bmp;jpg"
-			>
+			<File
+				RelativePath=".\cudafunctions.cu"
+				>
+			</File>
+			<File
+				RelativePath=".\kernel_CopyImage.cu"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\kernel_Grayscale.cu"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\kernel_MeanFilter.cu"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\kernel_MedianFilter.cu"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\kernel_SobelFilter.cu"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

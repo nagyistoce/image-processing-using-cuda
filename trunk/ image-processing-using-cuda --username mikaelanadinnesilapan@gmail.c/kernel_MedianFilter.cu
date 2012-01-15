@@ -4,7 +4,7 @@ __device__ int getMedianIndex (int size)
 	return (size % 2 == 0) ? (int)size/2 : (int)(size/2)+1;
 }
 
-__global__ void MedianFilter( RGBA *dst, int imageW, int imageH)
+__global__ void MedianFilter( uint *dst, int imageW, int imageH)
 {
 
 	//wag gawing shared!
@@ -81,7 +81,7 @@ __global__ void MedianFilter( RGBA *dst, int imageW, int imageH)
 	}
 }
 
-extern "C" void medianFilterWrapper (RGBA *dst, int imageW, int imageH)
+extern "C" void medianFilterWrapper (uint *dst, int imageW, int imageH)
 {
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);
