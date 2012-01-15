@@ -1,6 +1,6 @@
 
 
-__global__ void Copy ( RGBA *dst, int imageW, int imageH ) 
+__global__ void Copy ( uint *dst, int imageW, int imageH ) 
 {
 	const int ix = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
     const int iy = __umul24(blockIdx.y, blockDim.y) + threadIdx.y;
@@ -14,7 +14,7 @@ __global__ void Copy ( RGBA *dst, int imageW, int imageH )
     }
 }
 
-extern "C" void copyImageWrapper (RGBA *dst, int imageW, int imageH) 
+extern "C" void copyImageWrapper (uint *dst, int imageW, int imageH) 
 {
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);

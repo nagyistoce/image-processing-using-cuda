@@ -31,7 +31,7 @@ __device__ float vecLen(float4 a, float4 b){
     );
 }
 
-__device__ RGBA make_color(float r, float g, float b, float a){
+__device__ uint make_color(float r, float g, float b, float a){
     return
         ((int)(a * 255.0f) << 24) |
         ((int)(b * 255.0f) << 16) |
@@ -39,14 +39,14 @@ __device__ RGBA make_color(float r, float g, float b, float a){
         ((int)(r * 255.0f) <<  0);
 }
 
-// convert floating point rgba color to 32-bit integer
-__device__ unsigned int rgbaFloatToInt(float4 rgba)
+// convert floating point uint color to 32-bit integer
+__device__ unsigned int uintFloatToInt(float4 uint)
 {
-    rgba.x = __saturatef(rgba.x);   // clamp to [0.0, 1.0]
-    rgba.y = __saturatef(rgba.y);
-    rgba.z = __saturatef(rgba.z);
-    rgba.w = __saturatef(rgba.w);
-    return (unsigned int(rgba.w * 255.0f) << 24) | (unsigned int(rgba.z * 255.0f) << 16) | (unsigned int(rgba.y * 255.0f) << 8) | unsigned int(rgba.x * 255.0f);
+    uint.x = __saturatef(uint.x);   // clamp to [0.0, 1.0]
+    uint.y = __saturatef(uint.y);
+    uint.z = __saturatef(uint.z);
+    uint.w = __saturatef(uint.w);
+    return (unsigned int(uint.w * 255.0f) << 24) | (unsigned int(uint.z * 255.0f) << 16) | (unsigned int(uint.y * 255.0f) << 8) | unsigned int(uint.x * 255.0f);
 }
 
 

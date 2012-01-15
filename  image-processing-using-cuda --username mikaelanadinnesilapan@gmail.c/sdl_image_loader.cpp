@@ -68,7 +68,6 @@ extern "C" void loadImageSDL ( uchar4 **dst, int *w, int *h, char *file ) {
 	image_format[len] = '\0';
 	strncpy(image_format, (file+(len-3)), 4);
 	
-	printf("Loaded image format: %s...\n", image_format);
 	int notBMP = strcmp(image_format, "bmp");
 
 	unsigned int pixel = 0;

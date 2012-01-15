@@ -3,8 +3,8 @@
 
 #include <math.h>
 
-typedef unsigned int RGBA;
-typedef unsigned char Pixel;
+typedef unsigned int uint;
+typedef unsigned char uchar;
 
 #define MIN_MEAN_RADIUS 3 
 #define MAX_MEAN_RADIUS(width) width/3
@@ -26,10 +26,10 @@ extern "C" cudaError_t CUDA_FreeArray();
 
 //image processing kernels
 
-extern "C" void copyImageWrapper (RGBA *dst, int imageW, int imageH);
-extern "C" void grayImageWrapper (RGBA *dst, int imageW, int imageH); 
-extern "C" void meanFilterWrapper (RGBA *dst, int imageW, int imageH, int radius);
-extern "C" void medianFilterWrapper (RGBA *dst, int imageW, int imageH);
-extern "C" void sobelFilterWrapper (Pixel *gray, RGBA *dst, int imageW, int imageH);
+extern "C" void copyImageWrapper (uint *dst, int imageW, int imageH);
+extern "C" void grayImageWrapper (uint *dst, int imageW, int imageH); 
+extern "C" void meanFilterWrapper (uint *dst, int imageW, int imageH, int radius);
+extern "C" void medianFilterWrapper (uint *dst, int imageW, int imageH);
+extern "C" void sobelFilterWrapper (uint *dst, int imageW, int imageH);
 
 #endif

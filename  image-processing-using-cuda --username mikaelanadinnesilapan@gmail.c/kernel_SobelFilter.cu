@@ -1,4 +1,16 @@
-__global__ void GrayscaleUchar( Pixel *dst, int imageW, int imageH ) 
+__device__ float Sobel (float p00, float p01, float p02, 
+					  float p10, float p11, float p12, 
+					  float p20, float p21, float p22) 
+{
+	float Gx = p02 + 2*p12 + p22 - p00 - 2*p10 - p20;
+    float Gy = p00 + 2*p01 + p02 - p20 - 2*p21 - p22;
+    float G = (abs(Gx)+abs(Gy));
+    if ( G < 0 ) return 0.f; else if ( G > 1.f ) return 1.f;
+    return G;
+
+}
+
+__global__ void CopyGrayscale( uint *dst, int imageW, int imageH ) 
 {
     const int ix = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
     const int iy = __umul24(blockIdx.y, blockDim.y) + threadIdx.y;
@@ -8,57 +20,46 @@ __global__ void GrayscaleUchar( Pixel *dst, int imageW, int imageH )
 		const float x = (float)ix + 0.5f;
 		const float y = (float)iy + 0.5f;
 		float4 fresult = tex2D(texImage, x, y);
-		float gray = (fresult.x + fresult.y + fresult.z)/3;
-		Pixel grayPix = ((Pixel)gray)*255;
-        dst[imageW * iy + ix] = grayPix;
+		float gray = (fresult.x + fresult.y + fresult.z)/3;		
+        dst[imageW * iy + ix] = make_color(gray, gray, gray, 0);
 	}    
 }
 
 
-__global__ void SobelFilter(Pixel *src, RGBA *dst, int imageW, int imageH)
+__global__ void SobelFilter(uint *dst, int imageW, int imageH)
 {	
-	/*
+	
     const int ix = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
     const int iy = __umul24(blockIdx.y, blockDim.y) + threadIdx.y;
     //Add half of a texel to always address exact texel centers
     const float x = (float)ix + 0.5f;
     const float y = (float)iy + 0.5f;
 
-	float4 pixel = {0,0,0,0};
-	float window [BLOCKDIM_X*BLOCKDIM_Y][9];
-	int id = threadIdx.y*blockDim.y+threadIdx.x;
-	int index = 0;
+	float pix00 = (tex2D( texImage, (float) x-1, (float) y-1 ).x);
+    float pix01 = (tex2D( texImage, (float) x+0, (float) y-1 ).x);
+    float pix02 = (tex2D( texImage, (float) x+1, (float) y-1 ).x);
+    float pix10 = (tex2D( texImage, (float) x-1, (float) y+0 ).x);
+    float pix11 = (tex2D( texImage, (float) x+0, (float) y+0 ).x);
+    float pix12 = (tex2D( texImage, (float) x+1, (float) y+0 ).x);
+    float pix20 = (tex2D( texImage, (float) x-1, (float) y+1 ).x);
+    float pix21 = (tex2D( texImage, (float) x+0, (float) y+1 ).x);
+    float pix22 = (tex2D( texImage, (float) x+1, (float) y+1 ).x);
+		
+	float sobel = Sobel(	pix00, pix01, pix02, 
+							pix10, pix11, pix12,
+							pix20, pix21, pix22 );
 
-	for(int i=x-1; i<=x+1; i++)
-	{
-		for(int j=y-1; j<=y+1; j++)
-		{
-			pixel = tex2D(texImage, i, j);
-			window[id][index++] = pixel.x; 
-		}
-	}
-
+	dst[imageW * iy + ix] =	make_color(sobel, sobel, sobel, 1.f);
 	
-	dst[imageW * iy + ix] = Sobel(window[id][0], window[id][3], window[id][6], 
-										window[id][1], window[id][4], window[id][7], 
-										window[id][2], window[id][5], window[id][8]);
-	*/
 }
 
 
-extern "C" void sobelFilterWrapper (Pixel *gray, RGBA *dst, int imageW, int imageH)
+extern "C" void sobelFilterWrapper (uint *dst, int imageW, int imageH)
 {
-
-	/*cudaMallocArray(&gray_Src, &uchartex, imageW, imageH);
-    cudaMemcpyToArray(gray_Src, 0, 0,
-                              *h_Src, imageW * imageH * sizeof(uchar4),
-                              cudaMemcpyHostToDevice
-                              );
-	*/
-
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);
 	dim3 grid(iDivUp(imageW, BLOCKDIM_X), iDivUp(imageH, BLOCKDIM_Y));
 
-	SobelFilter<<<grid, threads>>>(gray, dst, imageW, imageH);
+	CopyGrayscale<<<grid, threads>>>(dst, imageW, imageH);
+	SobelFilter<<<grid, threads>>>(dst, imageW, imageH);
 }

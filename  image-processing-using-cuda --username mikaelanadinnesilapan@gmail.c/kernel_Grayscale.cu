@@ -1,5 +1,5 @@
 
-__global__ void Grayscale ( RGBA *dst, int imageW, int imageH ) 
+__global__ void Grayscale ( uint *dst, int imageW, int imageH ) 
 {
     const int ix = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
     const int iy = __umul24(blockIdx.y, blockDim.y) + threadIdx.y;
@@ -15,7 +15,7 @@ __global__ void Grayscale ( RGBA *dst, int imageW, int imageH )
     
 }
 
-extern "C" void grayImageWrapper (RGBA *dst, int imageW, int imageH) 
+extern "C" void grayImageWrapper (uint *dst, int imageW, int imageH) 
 {
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);
