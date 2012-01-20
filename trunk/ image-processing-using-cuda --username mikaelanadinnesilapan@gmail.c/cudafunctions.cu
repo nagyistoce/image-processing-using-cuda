@@ -3,33 +3,11 @@
 #include <string.h>
 #include "cudafunctions.h"
 
-////////////////////////////////////////////////////////////////////////////////
-// Helper functions
-////////////////////////////////////////////////////////////////////////////////
-float Max(float x, float y){
-    return (x > y) ? x : y;
-}
-
-float Min(float x, float y){
-    return (x < y) ? x : y;
-}
 
 int iDivUp(int a, int b){
     return ((a % b) != 0) ? (a / b + 1) : (a / b);
 }
 
-
-__device__ float lerpf(float a, float b, float c){
-    return a + (b - a) * c;
-}
-
-__device__ float vecLen(float4 a, float4 b){
-    return (
-        (b.x - a.x) * (b.x - a.x) +
-        (b.y - a.y) * (b.y - a.y) +
-        (b.z - a.z) * (b.z - a.z)
-    );
-}
 
 __device__ uint make_color(float r, float g, float b, float a){
     return
@@ -39,27 +17,17 @@ __device__ uint make_color(float r, float g, float b, float a){
         ((int)(r * 255.0f) <<  0);
 }
 
-// convert floating point uint color to 32-bit integer
-__device__ unsigned int uintFloatToInt(float4 uint)
-{
-    uint.x = __saturatef(uint.x);   // clamp to [0.0, 1.0]
-    uint.y = __saturatef(uint.y);
-    uint.z = __saturatef(uint.z);
-    uint.w = __saturatef(uint.w);
-    return (unsigned int(uint.w * 255.0f) << 24) | (unsigned int(uint.z * 255.0f) << 16) | (unsigned int(uint.y * 255.0f) << 8) | unsigned int(uint.x * 255.0f);
-}
 
+/**************************************************
+ Global variables for texture fetching and array
+**************************************************/
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Global data handlers and parameters
-////////////////////////////////////////////////////////////////////////////////
-//Texture reference and channel descriptor for image texture
 texture<uchar4, 2, cudaReadModeNormalizedFloat> texImage;
 cudaChannelFormatDesc uchar4tex = cudaCreateChannelDesc<uchar4>();
 
-//CUDA array descriptor
+
 cudaArray *a_Src;
+
 
 /*******************************************
  CUDA Init Functions for Texture and Array
@@ -107,3 +75,8 @@ cudaError_t CUDA_FreeArray()
 #include "kernel_MeanFilter.cu"
 #include "kernel_MedianFilter.cu"
 #include "kernel_SobelFilter.cu"
+#include "kernel_Binarization.cu"
+#include "kernel_HighPassFilter.cu"
+#include "kernel_Gamma.cu"
+#include "kernel_Brightness.cu"
+#include "kernel_Invert.cu"

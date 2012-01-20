@@ -10,7 +10,7 @@ __global__ void Copy ( uint *dst, int imageW, int imageH )
 		const float x = (float)ix + 0.5f;
 		const float y = (float)iy + 0.5f;
         float4 fresult = tex2D(texImage, x, y);
-        dst[imageW * iy + ix] = make_color(fresult.x, fresult.y, fresult.z, 0);
+        dst[imageW * iy + ix] = make_color(fresult.x, fresult.y, fresult.z, 0.f);
     }
 }
 

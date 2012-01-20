@@ -31,5 +31,10 @@ extern "C" void grayImageWrapper (uint *dst, int imageW, int imageH);
 extern "C" void meanFilterWrapper (uint *dst, int imageW, int imageH, int radius);
 extern "C" void medianFilterWrapper (uint *dst, int imageW, int imageH);
 extern "C" void sobelFilterWrapper (uint *dst, int imageW, int imageH);
+extern "C" void binarizationWrapper (uint *dst, int imageW, int imageH, int threshold);
+extern "C" void highPassFilterWrapper (uint *dst, int imageW, int imageH);
+extern "C" void gammaCorrectionWrapper (uint *dst, int imageW, int imageH, float gamma);
+extern "C" void brightnessWrapper (uint *dst, int imageW, int imageH, float brightness);
+extern "C" void invertWrapper (uint *dst, int imageW, int imageH);
 
 #endif

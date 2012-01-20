@@ -36,10 +36,10 @@ unsigned int frameCount = 0;
 int  processing_Kernel = 0;
 uchar4 *h_Src;
 int imageW, imageH;
-int mean_radius = 8;
-int radius_step = 2;
-
-
+int mean_radius = 1;
+int threshold = 100;
+float gamma = 3.5;
+float brightness = 0.5;
 /**
 	Functions
 **/
@@ -150,10 +150,22 @@ void callProcessingKernel(uint *dst)
 			meanFilterWrapper(dst, imageW, imageH, mean_radius);
 			break;
 		case 4:
-			medianFilterWrapper(dst, imageW, imageH);
-			break;
-		case 5:			
 			sobelFilterWrapper(dst, imageW, imageH);
+			break;
+		case 5:
+			binarizationWrapper(dst, imageW, imageH, threshold);
+			break;
+		case 6:
+			highPassFilterWrapper(dst, imageW, imageH);
+			break;
+		case 7:
+			gammaCorrectionWrapper (dst, imageW, imageH, gamma);
+			break;
+		case 8:
+			brightnessWrapper (dst, imageW, imageH, brightness);
+			break;
+		case 9:
+			invertWrapper (dst, imageW, imageH);
 			break;
 	}
 }
@@ -164,20 +176,23 @@ void display(void){
 	size_t num_bytes;
 
     if(frameCounter++ == 0) cutResetTimer(hTimer);
-    // DEPRECATED: cutilSafeCall(cudaGLMapBufferObject((void**)&d_dst, gl_PBO));
+    
     cutilSafeCall(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
 	cutilCheckMsg("cudaGraphicsMapResources failed");
     cutilSafeCall(cudaGraphicsResourceGetMappedPointer((void**)&d_dst, &num_bytes, cuda_pbo_resource));
 	cutilCheckMsg("cudaGraphicsResourceGetMappedPointer failed");
-
     cutilSafeCall( CUDA_BindTextureToArray() );
+
+
+
 
 	//call function for launching the kernels
 	callProcessingKernel(d_dst);
 
-    cutilSafeCall( CUDA_UnbindTexture() );
-    
-	// DEPRECATED: cutilSafeCall(cudaGLUnmapBufferObject(gl_PBO));
+
+
+
+    cutilSafeCall( CUDA_UnbindTexture() );	
 	cutilSafeCall(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
 
 	{
@@ -233,58 +248,116 @@ void keyboard(unsigned char k, int /*x*/, int /*y*/)
             cudaThreadExit();
             exit(0);
         break;
-
-		case '1':
-			printf("Original image.\n");
-			processing_Kernel = 1;
-		break;
-
-		case '2':
-			printf("Grayscale image.\n");
-			processing_Kernel = 2;
-		break;
-
-		case '3':
-			printf("Mean filtering applied.\n");
-			processing_Kernel = 3;
-		break;
-
-		case '4':
-			printf("Median filtering applied.\n");
-			processing_Kernel = 4;
-		break;
-
-		case '5':			
-			processing_Kernel = 5;
-		break;
-
-		case '6':			
-			processing_Kernel = 6;
-		break;
-
-		case '7':			
-			processing_Kernel = 7;
-		break;
-
+		
 		case '-':
-			if (processing_Kernel == 3) {
-				mean_radius -= radius_step;
-				if (mean_radius < MIN_MEAN_RADIUS) mean_radius = MIN_MEAN_RADIUS;
+			if (processing_Kernel == 3) {				
+				if (mean_radius > MIN_MEAN_RADIUS) --mean_radius;
 				printf("Windows Radius = %d\n", mean_radius);
+			}
+			if (processing_Kernel == 5) {					
+				if(threshold > 0) --threshold;
+				printf("Threshold = %d\n", threshold);
+			}
+			if (processing_Kernel == 7) {	
+				if(gamma > 0.1) gamma -= 0.01;
+				printf("Gamma = %.2f\n", gamma);
+			}
+			if (processing_Kernel == 8) {	
+				if(brightness > 0.1) brightness -= 0.01;
+				printf("Brightness Adjustment = %.2f\n", brightness);
 			}
 		break;
 
 		case '=':			
 			if (processing_Kernel == 3) {
-				mean_radius += radius_step;
-				if (mean_radius > MAX_MEAN_RADIUS(imageW)) mean_radius = MAX_MEAN_RADIUS(imageW);
+				if (mean_radius < MAX_MEAN_RADIUS(imageW)) ++mean_radius;
 				printf("Window Radius = %d\n", mean_radius);
+			}
+			if (processing_Kernel == 5) {	
+				if(threshold < 255) ++threshold;
+				printf("Threshold = %d\n", threshold);
+			}
+			if (processing_Kernel == 7) {	
+				if(gamma < 4.9f) gamma += 0.01;
+				printf("Gamma = %.2f\n", gamma);
+			}
+			if (processing_Kernel == 8) {	
+				if(brightness < 0.8f) brightness += 0.01;
+				printf("Brightness Adjustment = %.2f\n", brightness);
 			}
 		break;
 	}
      
 }
 
+
+void Kernel_Menu (int menu)
+{
+	switch(menu)
+	{
+	case 1:
+		printf("Original image.\n");
+		processing_Kernel = 1;
+	break;
+
+	case 2:
+		printf("Grayscale image.\n");
+		processing_Kernel = 2;
+	break;
+
+	case 3:
+		printf("Mean filtering applied.\n");
+		processing_Kernel = 3;
+	break;
+
+	case 4:
+		printf("Sobel filtering applied.\n");
+		processing_Kernel = 4;
+	break;
+
+	case 5:			
+		printf("Binarized image.\n");
+		processing_Kernel = 5;
+	break;
+
+	case 6:			
+		processing_Kernel = 6;
+	break;
+
+	case 7:		
+		printf("Contrast changed.\n");
+		processing_Kernel = 7;
+	break;
+	
+	case 8:			
+		printf("Brightness changed.\n");
+		processing_Kernel = 8;
+	break;
+
+	case 9:			
+		printf("Image Inverted.\n");
+		processing_Kernel = 9;
+	break;		
+	}
+}
+
+int BuildPopupMenu (void)
+{
+  int menu;
+
+  menu = glutCreateMenu (Kernel_Menu);
+  glutAddMenuEntry ("View Image", 1);
+  glutAddMenuEntry ("Grayscale", 2);
+  glutAddMenuEntry ("Smoothing", 3);
+  glutAddMenuEntry ("Edge Detection", 4);
+  glutAddMenuEntry ("Binarization", 5);
+  glutAddMenuEntry ("Sharpening (not yet done)", 6);
+  glutAddMenuEntry ("Gamma Correction", 7);
+  glutAddMenuEntry ("Adjust Brightness", 8);
+    glutAddMenuEntry ("Invert Image", 9);
+
+  return menu;
+}
 
 
 
@@ -324,22 +397,37 @@ int main(int argc, char **argv)
     cutilSafeCall( CUDA_MallocArray(&h_Src, imageW, imageH) );
 
 	initOpenGLBuffers();
-		
-	printf("\t%s\n", argv[0]);
-    printf("Press [1] to view original image\n");
-    printf("Press [2] to view image in grayscale\n");
-	printf("Press [3] to view image using mean filtering\n");
-	printf("\tPress [-] to decrease window radius\n\tPress [=] to increase window radius\n");
-	printf("Press [4] to view image using median filtering\n");
+
+	/*
+	threshold
+	brightness, contrast, 
+	gamma correction,
+	smoothing, edge detection
+	invert, 
+
+
+	enhancement
+	erosion and dilation
+	opening and closing
+	*/
+	
+	printf("Left Click on the Window to view menu\n");
+	printf("\tPress [-] to decrease radius\n\tPress [=] to increase radius\n");
+	printf("\tPress [-] to decrease threshold\n\tPress [=] to increase threshold\n");
+	printf("\tPress [-] to decrease gamma\n\tPress [=] to increase gamma\n");
+	printf("\tPress [-] to decrease brightness\n\tPress [=] to increase brightness\n");
     printf("Press [q] to exit\n");
 
 	glutIdleFunc(display);
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
+
+	BuildPopupMenu ();
+	glutAttachMenu (GLUT_LEFT_BUTTON);
+		
     cutilCheckError( cutCreateTimer(&hTimer) );
     cutilCheckError( cutStartTimer(hTimer)   );
-    glutMainLoop();
-	
+    glutMainLoop();	
 
     cutilExit(argc, argv);
     cudaThreadExit();
