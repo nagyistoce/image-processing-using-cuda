@@ -17,6 +17,21 @@ __device__ uint make_color(float r, float g, float b, float a){
         ((int)(r * 255.0f) <<  0);
 }
 
+__device__ float4 adjust_brightness (float4 rgba, float brightness){
+	float4 a;
+	a.x = rgba.x*(1.f - brightness)+brightness;
+	a.y = rgba.y*(1.f - brightness)+brightness;
+	a.z = rgba.z*(1.f - brightness)+brightness;
+	return a;
+}
+
+__device__ float4 adjust_contrast (float4 rgba, float contrast){
+	float4 a;
+	a.x = pow(rgba.x, contrast);
+	a.y = pow(rgba.y, contrast);
+	a.z = pow(rgba.z, contrast);
+	return a;
+}
 
 /**************************************************
  Global variables for texture fetching and array

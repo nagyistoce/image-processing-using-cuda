@@ -1,6 +1,6 @@
+#include <shrUtils.h>
 
-
-__global__ void Copy ( uint *dst, int imageW, int imageH ) 
+__global__ void Copy ( uint *dst, int imageW, int imageH, float brightness, float contrast) 
 {
 	const int ix = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
     const int iy = __umul24(blockIdx.y, blockDim.y) + threadIdx.y;
@@ -10,15 +10,24 @@ __global__ void Copy ( uint *dst, int imageW, int imageH )
 		const float x = (float)ix + 0.5f;
 		const float y = (float)iy + 0.5f;
         float4 fresult = tex2D(texImage, x, y);
-        dst[imageW * iy + ix] = make_color(fresult.x, fresult.y, fresult.z, 0.f);
+		float4 fnew = adjust_contrast(fresult, contrast);
+		fnew = adjust_brightness(fnew, brightness);
+
+		dst[imageW * iy + ix] =  make_color(fnew.x, fnew.y, fnew.z, 1.f);        
     }
 }
 
-extern "C" void copyImageWrapper (uint *dst, int imageW, int imageH) 
+extern "C" double copyImageWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast) 
 {
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);
 	dim3 grid(iDivUp(imageW, BLOCKDIM_X), iDivUp(imageH, BLOCKDIM_Y));
 
-	Copy<<<grid, threads>>>(dst, imageW, imageH);
+	double kernel_time = 0.0;
+	shrDeltaT(0);
+	Copy<<<grid, threads>>>(dst, imageW, imageH, brightness, contrast);
+	kernel_time = shrDeltaT(0);
+
+	return kernel_time;
+
 }

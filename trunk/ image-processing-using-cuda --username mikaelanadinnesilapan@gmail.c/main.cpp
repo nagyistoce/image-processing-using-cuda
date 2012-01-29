@@ -12,6 +12,7 @@
 #include "cudafunctions.h"
 #include <rendercheck_gl.h>
 
+#include "glui.h"
 
 
 /**
@@ -21,7 +22,6 @@
 GLuint gl_PBO, gl_Tex;
 GLuint shader;
 struct cudaGraphicsResource *cuda_pbo_resource; // handles OpenGL-CUDA exchange
-
 
 bool    g_FPS = false;
 unsigned int hTimer;
@@ -33,26 +33,105 @@ unsigned int frameCount = 0;
 
 
 #define BUFFER_DATA(i) ((char *)0 + i)
+char *image_file = "images/bear.jpg";
+char *image_format;
 int  processing_Kernel = 0;
 uchar4 *h_Src;
 int imageW, imageH;
 int mean_radius = 1;
-int threshold = 100;
-float gamma = 3.5;
-float brightness = 0.5;
+int threshold = 150;
+float contrast = 1.0;
+float brightness = 0.0;
+
+//GLui
+int main_window = 0;
+GLUI *sub_window;
+GLUI_Panel *panel_1, *panel_2, *panel_3;
+GLUI_Spinner *s_brightness, *s_contrast, *s_threshold, *s_radius;
+
+
+#define _NEWLINE_ sub_window->add_statictext( "" );
+
+
 /**
-	Functions
+Functions
 **/
+
+
+void control_cb( int control )
+{		
+    processing_Kernel = control;
+}
+
 
 void initGL( int *argc, char **argv )
 {
     printf("Initializing GLUT...\n");
     glutInit(argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
-    glutInitWindowSize(imageW, imageH);
-    glutInitWindowPosition(512 - imageW / 2, 384 - imageH / 2);
-    glutCreateWindow(argv[0]);
-    printf("OpenGL window created.\n");
+
+	if(imageW>1000)
+		glutInitWindowSize(imageW-430, imageH-400);	
+	if(imageW>800)
+		glutInitWindowSize(imageW-230, imageH-200);	
+	else
+		glutInitWindowSize(imageW+230, imageH+200);	
+    
+    glutInitWindowPosition( 50, 50 );
+    main_window = glutCreateWindow("Image Processing with CUDA");	
+	
+	sub_window = GLUI_Master.create_glui_subwindow( main_window, GLUI_SUBWINDOW_RIGHT );
+	sub_window->set_main_gfx_window( main_window );
+
+	_NEWLINE_
+	sub_window->add_statictext( "IMAGE PROCESSING USING CUDA" );
+	sub_window->add_statictext( "Mikaela Nadinne A. Silapan" );
+	sub_window->add_separator();
+	_NEWLINE_
+
+	char str[100];
+	sprintf(str, "Loaded image: %s", image_file);
+	sub_window->add_statictext(str);
+	sprintf(str, "Image Size: %d x %d", imageW, imageH);
+	sub_window->add_statictext(str);	
+	sub_window->add_button( "Press to View Image", 0, control_cb );
+	_NEWLINE_
+
+	panel_1  = sub_window->add_panel( "" );
+	s_brightness  = sub_window->add_spinner_to_panel( panel_1, "Brightness:", GLUI_SPINNER_FLOAT, &brightness);
+	s_brightness->set_int_limits( 0.1f, 1.0f );
+	s_brightness->set_alignment( GLUI_ALIGN_RIGHT );
+
+	s_contrast  = sub_window->add_spinner_to_panel( panel_1, "Contrast:", GLUI_SPINNER_FLOAT, &contrast);
+	s_contrast->set_int_limits( 0.2f, 5.0f );
+	s_contrast->set_alignment( GLUI_ALIGN_RIGHT );
+
+	_NEWLINE_
+	sub_window->add_button( "Grayscale", 1, control_cb );
+	sub_window->add_button( "Invert", 2, control_cb );
+	
+	sub_window->add_button( "Binarize", 3, control_cb );		
+	panel_2  = sub_window->add_panel( "" );
+	s_threshold  = sub_window->add_spinner_to_panel(panel_2, "Threshold:", GLUI_SPINNER_INT, &threshold);
+	s_threshold->set_int_limits( 10, 255 );
+	s_threshold->set_alignment( GLUI_ALIGN_RIGHT );
+	s_threshold->disable();
+
+	sub_window->add_button( "Smoothen", 4, control_cb );
+	panel_3  = sub_window->add_panel( "" );
+	s_radius  = sub_window->add_spinner_to_panel(panel_3, "Radius", GLUI_SPINNER_INT, &mean_radius);
+	s_radius->set_int_limits( 1, 5 );
+	s_radius->set_alignment( GLUI_ALIGN_RIGHT );
+	s_radius->disable();
+
+	sub_window->add_button( "Detect Edges", 5, control_cb );
+	sub_window->add_button( "Sharpen", 10, control_cb );
+
+	
+	_NEWLINE_ _NEWLINE_	
+	sub_window->add_button( "Quit", 0, (GLUI_Update_CB)exit );
+
+	printf("OpenGL window created.\n");
 
     glewInit();
 }
@@ -140,34 +219,51 @@ void callProcessingKernel(uint *dst)
 {
 	switch(processing_Kernel)
 	{
+		case 0:
+			copyImageWrapper(dst, imageW, imageH, brightness, contrast);				s_threshold->disable();		
+			s_radius->disable();
+			break;
 		case 1:
-			copyImageWrapper(dst, imageW, imageH);
+			grayImageWrapper(dst, imageW, imageH, brightness, contrast);
+			s_threshold->disable();		
+			s_radius->disable();
 			break;
 		case 2:
-			grayImageWrapper(dst, imageW, imageH);
+			invertWrapper (dst, imageW, imageH, brightness, contrast);
+			s_threshold->disable();		
+			s_radius->disable();
 			break;
 		case 3:
-			meanFilterWrapper(dst, imageW, imageH, mean_radius);
+			binarizationWrapper(dst, imageW, imageH, threshold, brightness, contrast);	
+			s_threshold->enable();
+			s_radius->disable();
 			break;
 		case 4:
-			sobelFilterWrapper(dst, imageW, imageH);
+			meanFilterWrapper(dst, imageW, imageH, mean_radius, brightness, contrast);			
+			s_threshold->disable();		
+			s_radius->enable();
 			break;
-		case 5:
-			binarizationWrapper(dst, imageW, imageH, threshold);
+		case 5:			
+			sobelFilterWrapper(dst, imageW, imageH, brightness, contrast);
+			s_threshold->disable();		
+			s_radius->disable();
 			break;
-		case 6:
-			highPassFilterWrapper(dst, imageW, imageH);
-			break;
-		case 7:
-			gammaCorrectionWrapper (dst, imageW, imageH, gamma);
-			break;
-		case 8:
-			brightnessWrapper (dst, imageW, imageH, brightness);
-			break;
-		case 9:
-			invertWrapper (dst, imageW, imageH);
+		case 10:
+			highPassFilterWrapper(dst, imageW, imageH, brightness, contrast);
+			s_threshold->disable();		
+			s_radius->disable();
 			break;
 	}
+}
+void reshape( int x, int y )
+{
+  
+  int tx, ty, tw, th;
+  GLUI_Master.get_viewport_area( &tx, &ty, &tw, &th );
+  glViewport( tx, ty, tw, th );
+
+  glutPostRedisplay();
+  
 }
 void display(void){
 
@@ -177,24 +273,18 @@ void display(void){
 
     if(frameCounter++ == 0) cutResetTimer(hTimer);
     
-    cutilSafeCall(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
+	cutilSafeCall(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
 	cutilCheckMsg("cudaGraphicsMapResources failed");
     cutilSafeCall(cudaGraphicsResourceGetMappedPointer((void**)&d_dst, &num_bytes, cuda_pbo_resource));
 	cutilCheckMsg("cudaGraphicsResourceGetMappedPointer failed");
     cutilSafeCall( CUDA_BindTextureToArray() );
 
-
-
-
-	//call function for launching the kernels
+	//call function for launching the kernels	
 	callProcessingKernel(d_dst);
-
-
-
 
     cutilSafeCall( CUDA_UnbindTexture() );	
 	cutilSafeCall(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
-
+	
 	{
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -228,7 +318,7 @@ void display(void){
 
 void keyboard(unsigned char k, int /*x*/, int /*y*/)
 {
-    switch (k){
+    switch (k){		
         case '\033':
         case 'q':
         case 'Q':
@@ -247,147 +337,19 @@ void keyboard(unsigned char k, int /*x*/, int /*y*/)
             printf("Shutdown done.\n");
             cudaThreadExit();
             exit(0);
-        break;
-		
-		case '-':
-			if (processing_Kernel == 3) {				
-				if (mean_radius > MIN_MEAN_RADIUS) --mean_radius;
-				printf("Windows Radius = %d\n", mean_radius);
-			}
-			if (processing_Kernel == 5) {					
-				if(threshold > 0) --threshold;
-				printf("Threshold = %d\n", threshold);
-			}
-			if (processing_Kernel == 7) {	
-				if(gamma > 0.1) gamma -= 0.01;
-				printf("Gamma = %.2f\n", gamma);
-			}
-			if (processing_Kernel == 8) {	
-				if(brightness > 0.1) brightness -= 0.01;
-				printf("Brightness Adjustment = %.2f\n", brightness);
-			}
-		break;
-
-		case '=':			
-			if (processing_Kernel == 3) {
-				if (mean_radius < MAX_MEAN_RADIUS(imageW)) ++mean_radius;
-				printf("Window Radius = %d\n", mean_radius);
-			}
-			if (processing_Kernel == 5) {	
-				if(threshold < 255) ++threshold;
-				printf("Threshold = %d\n", threshold);
-			}
-			if (processing_Kernel == 7) {	
-				if(gamma < 4.9f) gamma += 0.01;
-				printf("Gamma = %.2f\n", gamma);
-			}
-			if (processing_Kernel == 8) {	
-				if(brightness < 0.8f) brightness += 0.01;
-				printf("Brightness Adjustment = %.2f\n", brightness);
-			}
-		break;
+        break;		
 	}
      
 }
 
 
-void Kernel_Menu (int menu)
-{
-	switch(menu)
-	{
-	case 1:
-		printf("Original image.\n");
-		processing_Kernel = 1;
-	break;
 
-	case 2:
-		printf("Grayscale image.\n");
-		processing_Kernel = 2;
-	break;
-
-	case 3:
-		printf("Mean filtering applied.\n");
-		processing_Kernel = 3;
-	break;
-
-	case 4:
-		printf("Sobel filtering applied.\n");
-		processing_Kernel = 4;
-	break;
-
-	case 5:			
-		printf("Binarized image.\n");
-		processing_Kernel = 5;
-	break;
-
-	case 6:			
-		processing_Kernel = 6;
-	break;
-
-	case 7:		
-		printf("Contrast changed.\n");
-		processing_Kernel = 7;
-	break;
-	
-	case 8:			
-		printf("Brightness changed.\n");
-		processing_Kernel = 8;
-	break;
-
-	case 9:			
-		printf("Image Inverted.\n");
-		processing_Kernel = 9;
-	break;		
-	}
-}
-
-int BuildPopupMenu (void)
-{
-  int menu;
-
-  menu = glutCreateMenu (Kernel_Menu);
-  glutAddMenuEntry ("View Image", 1);
-  glutAddMenuEntry ("Grayscale", 2);
-  glutAddMenuEntry ("Smoothing", 3);
-  glutAddMenuEntry ("Edge Detection", 4);
-  glutAddMenuEntry ("Binarization", 5);
-  glutAddMenuEntry ("Sharpening (not yet done)", 6);
-  glutAddMenuEntry ("Gamma Correction", 7);
-  glutAddMenuEntry ("Adjust Brightness", 8);
-    glutAddMenuEntry ("Invert Image", 9);
-
-  return menu;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-**	Main Program
-**	Summary:
-**	Check Debug Mode
-**	Check if device is capable of rendering in OpenGL mode
-**	if yes, load image data
-**	initGL
-**	allocate device memory: h_Src = a_Src [in CUDA code so it's not declared here]
-**	init openGL buffers for rendering.. shader program compilation.. reg and unreg PBO
-*/
 
 int main(int argc, char **argv)
 {
-
 	// First load the image, so we know what the size of the image (imageW and imageH)    
 	//image data is now in h_Src
-	loadImageSDL(&h_Src, &imageW, &imageH, "images/piggies.jpg"); 	
+	loadImageSDL(&h_Src, &imageW, &imageH, image_file); 	
 		
 	// First initialize OpenGL context, create opengl window
 	initGL( &argc, argv );
@@ -401,8 +363,7 @@ int main(int argc, char **argv)
 	/*
 	threshold
 	brightness, contrast, 
-	gamma correction,
-	smoothing, edge detection
+	smoothing, edge detection,
 	invert, 
 
 
@@ -411,23 +372,30 @@ int main(int argc, char **argv)
 	opening and closing
 	*/
 	
-	printf("Left Click on the Window to view menu\n");
-	printf("\tPress [-] to decrease radius\n\tPress [=] to increase radius\n");
-	printf("\tPress [-] to decrease threshold\n\tPress [=] to increase threshold\n");
-	printf("\tPress [-] to decrease gamma\n\tPress [=] to increase gamma\n");
-	printf("\tPress [-] to decrease brightness\n\tPress [=] to increase brightness\n");
-    printf("Press [q] to exit\n");
-
-	glutIdleFunc(display);
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
+	GLUI_Master.set_glutReshapeFunc(reshape);  
 
-	BuildPopupMenu ();
-	glutAttachMenu (GLUT_LEFT_BUTTON);
-		
     cutilCheckError( cutCreateTimer(&hTimer) );
     cutilCheckError( cutStartTimer(hTimer)   );
+
     glutMainLoop();	
+
+
+	//at exit
+
+	printf("Cleaning up...\n");
+    cutilCheckError( cutStopTimer(hTimer)   );
+    cutilCheckError( cutDeleteTimer(hTimer) );
+	cutilSafeCall(cudaGraphicsGLRegisterBuffer(&cuda_pbo_resource, gl_PBO, 
+						   cudaGraphicsMapFlagsWriteDiscard));
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+    glDeleteBuffers(1, &gl_PBO);
+    glDeleteTextures(1, &gl_Tex);
+
+    cutilSafeCall( CUDA_FreeArray() );
+    free(h_Src);
+	printf("Shutdown done.\n");
 
     cutilExit(argc, argv);
     cudaThreadExit();

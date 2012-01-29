@@ -41,12 +41,12 @@ __global__ void SobelFilter(uint *dst, int imageW, int imageH)
 }
 
 
-extern "C" void sobelFilterWrapper (uint *dst, int imageW, int imageH)
+extern "C" void sobelFilterWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast)
 {
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);
 	dim3 grid(iDivUp(imageW, BLOCKDIM_X), iDivUp(imageH, BLOCKDIM_Y));
 
-	Grayscale<<<grid, threads>>>(dst, imageW, imageH);
+	Grayscale<<<grid, threads>>>(dst, imageW, imageH, brightness, contrast);
 	SobelFilter<<<grid, threads>>>(dst, imageW, imageH);
 }
