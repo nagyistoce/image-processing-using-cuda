@@ -17,17 +17,12 @@ __global__ void Copy ( uint *dst, int imageW, int imageH, float brightness, floa
     }
 }
 
-extern "C" double copyImageWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast) 
+extern "C" void copyImageWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast) 
 {
 	//for more effective kernel execution
 	dim3 threads(BLOCKDIM_X, BLOCKDIM_Y);
 	dim3 grid(iDivUp(imageW, BLOCKDIM_X), iDivUp(imageH, BLOCKDIM_Y));
 
-	double kernel_time = 0.0;
-	shrDeltaT(0);
 	Copy<<<grid, threads>>>(dst, imageW, imageH, brightness, contrast);
-	kernel_time = shrDeltaT(0);
-
-	return kernel_time;
 
 }

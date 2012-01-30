@@ -25,7 +25,7 @@ extern "C" cudaError_t CUDA_FreeArray();
 
 //image processing kernels
 
-extern "C" double copyImageWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast); 
+extern "C" void copyImageWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast); 
 extern "C" void grayImageWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast);
 extern "C" void invertWrapper (uint *dst, int imageW, int imageH, float brightness, float contrast);
 extern "C" void binarizationWrapper (uint *dst, int imageW, int imageH, int threshold, float brightness, float contrast);

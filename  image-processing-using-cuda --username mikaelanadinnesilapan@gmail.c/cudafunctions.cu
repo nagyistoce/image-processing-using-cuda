@@ -92,6 +92,6 @@ cudaError_t CUDA_FreeArray()
 #include "kernel_SobelFilter.cu"
 #include "kernel_Binarization.cu"
 #include "kernel_HighPassFilter.cu"
-#include "kernel_Gamma.cu"
+#include "kernel_Contrast.cu"
 #include "kernel_Brightness.cu"
 #include "kernel_Invert.cu"
