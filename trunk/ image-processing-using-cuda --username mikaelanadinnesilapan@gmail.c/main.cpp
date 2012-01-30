@@ -30,10 +30,10 @@ int frameCounter = 0;
 int fpsCount = 0;        // FPS count for averaging
 int fpsLimit = 1;        // FPS limit for sampling
 unsigned int frameCount = 0;
-
+char fps[256];
 
 #define BUFFER_DATA(i) ((char *)0 + i)
-char *image_file = "images/bear.jpg";
+char *image_file = "images/hug.png";
 char *image_format;
 int  processing_Kernel = 0;
 uchar4 *h_Src;
@@ -43,13 +43,15 @@ int threshold = 150;
 float contrast = 1.0;
 float brightness = 0.0;
 
+
 //GLui
 int main_window = 0;
 GLUI *sub_window;
 GLUI_Panel *panel_1, *panel_2, *panel_3;
 GLUI_Spinner *s_brightness, *s_contrast, *s_threshold, *s_radius;
-
-
+GLUI_EditText *counter;
+GLUI_Button *binarize, *smoothen;
+char runtime[25];
 #define _NEWLINE_ sub_window->add_statictext( "" );
 
 
@@ -70,13 +72,18 @@ void initGL( int *argc, char **argv )
     glutInit(argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 
-	if(imageW>1000)
-		glutInitWindowSize(imageW-430, imageH-400);	
-	if(imageW>800)
-		glutInitWindowSize(imageW-230, imageH-200);	
-	else
-		glutInitWindowSize(imageW+230, imageH+200);	
-    
+	if(imageW > imageH){
+		if(imageW>1000)
+			glutInitWindowSize(imageW-430, imageH-400);	
+		if(imageW>800)
+			glutInitWindowSize(imageW-230, imageH-200);
+		else
+			glutInitWindowSize(imageW+130, imageH+100);	
+	}else{
+		if(imageH>520)
+			glutInitWindowSize(imageW+130, imageH+200);	
+	}    
+
     glutInitWindowPosition( 50, 50 );
     main_window = glutCreateWindow("Image Processing with CUDA");	
 	
@@ -110,15 +117,15 @@ void initGL( int *argc, char **argv )
 	sub_window->add_button( "Grayscale", 1, control_cb );
 	sub_window->add_button( "Invert", 2, control_cb );
 	
-	sub_window->add_button( "Binarize", 3, control_cb );		
 	panel_2  = sub_window->add_panel( "" );
+	sub_window->add_button_to_panel( panel_2, "Binarize", 3, control_cb);
 	s_threshold  = sub_window->add_spinner_to_panel(panel_2, "Threshold:", GLUI_SPINNER_INT, &threshold);
 	s_threshold->set_int_limits( 10, 255 );
 	s_threshold->set_alignment( GLUI_ALIGN_RIGHT );
 	s_threshold->disable();
 
-	sub_window->add_button( "Smoothen", 4, control_cb );
 	panel_3  = sub_window->add_panel( "" );
+	sub_window->add_button_to_panel( panel_3, "Smoothen", 4, control_cb );
 	s_radius  = sub_window->add_spinner_to_panel(panel_3, "Radius", GLUI_SPINNER_INT, &mean_radius);
 	s_radius->set_int_limits( 1, 5 );
 	s_radius->set_alignment( GLUI_ALIGN_RIGHT );
@@ -127,8 +134,10 @@ void initGL( int *argc, char **argv )
 	sub_window->add_button( "Detect Edges", 5, control_cb );
 	sub_window->add_button( "Sharpen", 10, control_cb );
 
-	
-	_NEWLINE_ _NEWLINE_	
+	_NEWLINE_
+	counter =  sub_window->add_edittext( "FPS: ", GLUI_EDITTEXT_INT, &fps );
+
+	_NEWLINE_	
 	sub_window->add_button( "Quit", 0, (GLUI_Update_CB)exit );
 
 	printf("OpenGL window created.\n");
@@ -187,7 +196,6 @@ void initOpenGLBuffers()
         //But in our particular case OpenGL is only used 
         //to display the content of the PBO, specified by CUDA kernels,
         //so we need to register/unregister it only once.
-	// DEPRECATED: cutilSafeCall( cudaGLRegisterBufferObject(gl_PBO) );
     cutilSafeCall(cudaGraphicsGLRegisterBuffer(&cuda_pbo_resource, gl_PBO, 
 					       cudaGraphicsMapFlagsWriteDiscard));
         CUT_CHECK_ERROR_GL();
@@ -203,12 +211,11 @@ void computeFPS()
     frameCount++;
     fpsCount++;
     
-	if (fpsCount == fpsLimit) {        
-   		char fps[256];
+	if (fpsCount == fpsLimit) {           		
    		float ifps = 1.f / (cutGetAverageTimerValue(hTimer) / 1000.f);
-        sprintf(fps, "%3.1f fps", ifps);
+        sprintf(fps, "%3.1f", ifps);
 
-        glutSetWindowTitle(fps);
+		//counter->set_text(fps);
         fpsCount = 0; 
 
         cutilCheckError(cutResetTimer(hTimer));        
@@ -217,39 +224,52 @@ void computeFPS()
 
 void callProcessingKernel(uint *dst)
 {
+	float time;
+
 	switch(processing_Kernel)
 	{
 		case 0:
-			copyImageWrapper(dst, imageW, imageH, brightness, contrast);				s_threshold->disable();		
+			time = copyImageWrapper(dst, imageW, imageH, brightness, contrast);
+			glutSetWindowTitle("Original Image");
+			sprintf(runtime, "%.2f", time);
+			counter->set_text(runtime);
+			
+			s_threshold->disable();		
 			s_radius->disable();
 			break;
 		case 1:
 			grayImageWrapper(dst, imageW, imageH, brightness, contrast);
+			glutSetWindowTitle("Grayscaled Image");
 			s_threshold->disable();		
 			s_radius->disable();
 			break;
 		case 2:
 			invertWrapper (dst, imageW, imageH, brightness, contrast);
+			glutSetWindowTitle("Inverted Image");
 			s_threshold->disable();		
 			s_radius->disable();
 			break;
 		case 3:
 			binarizationWrapper(dst, imageW, imageH, threshold, brightness, contrast);	
+			glutSetWindowTitle("Binarized Image");
 			s_threshold->enable();
 			s_radius->disable();
 			break;
 		case 4:
 			meanFilterWrapper(dst, imageW, imageH, mean_radius, brightness, contrast);			
+			glutSetWindowTitle("Smoothed Image");
 			s_threshold->disable();		
 			s_radius->enable();
 			break;
 		case 5:			
 			sobelFilterWrapper(dst, imageW, imageH, brightness, contrast);
+			glutSetWindowTitle("Sobel Filtered Image");
 			s_threshold->disable();		
 			s_radius->disable();
 			break;
 		case 10:
 			highPassFilterWrapper(dst, imageW, imageH, brightness, contrast);
+			glutSetWindowTitle("Sharpened Image");
 			s_threshold->disable();		
 			s_radius->disable();
 			break;
@@ -289,7 +309,7 @@ void display(void){
         glClear(GL_COLOR_BUFFER_BIT);
 
         glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, imageW, imageH, GL_RGBA, GL_UNSIGNED_BYTE, BUFFER_DATA(0) );
-        glBegin( GL_QUADS );
+        glBegin( GL_QUADS );				  
 		  glTexCoord2d(0.0,0.0); glVertex2d(+1.0,+1.0);
 		  glTexCoord2d(1.0,0.0); glVertex2d(-1.0,+1.0);
 		  glTexCoord2d(1.0,1.0); glVertex2d(-1.0,-1.0);
@@ -306,12 +326,10 @@ void display(void){
         }
     }
 
-	glutSwapBuffers();
-
 	cutStopTimer(hTimer);
 	computeFPS();
 
-	glutPostRedisplay();
+	glutSwapBuffers();
 }
 
 

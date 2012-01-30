@@ -16,7 +16,6 @@ __global__ void MeanFilter ( uint *dst, int imageW, int imageH, int radius, floa
 		float4 fresult = {0,0,0,0};
 		float count = 0.f;
 
-        //Cycle through KNN window, surrounding (x, y) texel
         for( float i = -radius; i <= radius; i++)
             for( float j = -radius; j <= radius; j++)
             {
