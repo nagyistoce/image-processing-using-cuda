@@ -49,7 +49,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:/glui_v2_2;&quot;C:/SDL_image-1.2.10&quot;;&quot;$(CUDA_PATH)/include&quot;;./;../../common/inc;../../../shared/inc"
+				AdditionalIncludeDirectories="C:\glui_v2_2;&quot;C:/SDL_image-1.2.10&quot;;&quot;$(CUDA_PATH)/include&quot;;./;../../common/inc;../../../shared/inc"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
