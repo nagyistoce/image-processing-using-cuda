@@ -224,16 +224,12 @@ void computeFPS()
 
 void callProcessingKernel(uint *dst)
 {
-	float time;
 
 	switch(processing_Kernel)
 	{
 		case 0:
-			time = copyImageWrapper(dst, imageW, imageH, brightness, contrast);
+			copyImageWrapper(dst, imageW, imageH, brightness, contrast);
 			glutSetWindowTitle("Original Image");
-			sprintf(runtime, "%.2f", time);
-			counter->set_text(runtime);
-			
 			s_threshold->disable();		
 			s_radius->disable();
 			break;
