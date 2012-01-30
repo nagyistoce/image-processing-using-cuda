@@ -59,8 +59,8 @@ __global__ void HighPassFilter(uint *dst, int imageW, int imageH, float brightne
 								pix10, pix11, pix12,
 								pix20, pix21, pix22 );
 
-		//float4 fnew = adjust_contrast(rgba, contrast);
-		//fnew = adjust_brightness(fnew, brightness);
+		float4 fnew = adjust_contrast(rgba, contrast);
+		fnew = adjust_brightness(fnew, brightness);
 
 		dst[imageW * iy + ix] =	make_color(fnew.x, fnew.y, fnew.z, 1.f);
 	
