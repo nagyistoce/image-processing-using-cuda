@@ -20,4 +20,4 @@ float binaryErosionCPU (float4 *src, unsigned int *dst, int imageW, int imageH, 
 float binaryDilationCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int threshold, int iteration, float brightness, float gamma, int mask_w, int mask_h, int adjust);
 float grayErosionCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int threshold, int iteration, float brightness, float gamma, int mask_w, int mask_h, int adjust);
 float grayDilationCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int threshold, int iteration, float brightness, float gamma, int mask_w, int mask_h, int adjust);
-float sharpenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, float brightness, float contrast, int adjust);
+float sharpenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int iteration, float brightness, float contrast, int adjust);
