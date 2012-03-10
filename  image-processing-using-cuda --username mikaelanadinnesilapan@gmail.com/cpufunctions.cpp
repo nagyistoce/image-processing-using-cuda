@@ -1,6 +1,7 @@
 #include "cpufunctions.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 unsigned int make_color_uint(int r, int g, int b, int a){
     return (
@@ -15,7 +16,7 @@ unsigned int make_color_float(float r, float g, float b, float a){
         ((int)(a * 255.0f) << 24) |
         ((int)(b * 255.0f) << 16) |
         ((int)(g * 255.0f) <<  8) |
-        ((int)(r * 255.0f) <<  0);
+		((int)(r * 255.0f) <<  0);
 }
 
 
@@ -330,22 +331,19 @@ float smoothenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int r
 			}
 		}
 
-		count = 1.f;
-		pixel_x = pixel_y = pixel_z = 0;
-
 		for(int i=0; i<imageW; i++)
 		{
 			for(int j=0; j<imageH; j++)
 			{
+				count = 1.f;
+				pixel_x = pixel_y = pixel_z = 0;
+
 				for (int m = i - radius ; m <= i + radius; m++){			
 					for (int n = j - radius ; n <= j + radius; n++){		
-						if(m > imageW || m <  0 || n > imageH || n < 0) {
-							//lampas sa bound ng image
-						}else{						
+						if(m < imageW && m >=  0 && n < imageH && n >= 0) {
 							pixel_x += temp[(imageW)*n+m].x;
 							pixel_y += temp[(imageW)*n+m].y;
 							pixel_z += temp[(imageW)*n+m].z;
-							printf("%.2f %.2f %.2f\n", pixel_x, pixel_y, pixel_z);
 							count += 1.f;
 						}
 					}
@@ -371,9 +369,7 @@ float smoothenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int r
 
 				for (int m = i - radius ; m <= i + radius; m++){			
 					for (int n = j - radius ; n <= j + radius; n++){		
-						if(m > imageW || m <  0 || n > imageH || n < 0) {
-							//lampas sa bound ng image
-						}else{						
+						if(m < imageW && m >=  0 && n < imageH && n >= 0) {
 							pixel_x += src[(imageW)*n+m].x;
 							pixel_y += src[(imageW)*n+m].y;
 							pixel_z += src[(imageW)*n+m].z;
@@ -396,6 +392,8 @@ float smoothenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int r
 	/* Stop timer */
 	stop = clock();
 	t = (float) (stop-start)/CLOCKS_PER_SEC;
+
+	free(temp);
 
 	return t;
 }
@@ -479,9 +477,15 @@ float binaryErosionCPU (float4 *src, unsigned int *dst, int imageW, int imageH, 
 				for (int m = x - mask_w ; m < x + mask_w && !match; m++){
 					for (int n = y - mask_h ; n < y + mask_h && !match; n++){
 						index = (imageW)*n+m;					
-						if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH)
+						if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH){
 							if (bw_src[index] == make_color_float(1.0, 1.0, 1.0, 1.0))
 								match = 1;
+						}else{
+							if (bw_src[(imageW)*y+x] == make_color_float(1.0, 1.0, 1.0, 1.0))
+								match = 1;
+							else
+								match = 0;
+						}
 					}
 				}
 				  
@@ -490,6 +494,42 @@ float binaryErosionCPU (float4 *src, unsigned int *dst, int imageW, int imageH, 
 				else
 				dst[imageW * y + x] = make_color_float(1.0, 1.0, 1.0, 1.0);
 							
+			}
+		}
+
+		if(iteration > 1)
+		{
+			for(int i=1; i<iteration; i++)
+			{
+				memcpy(bw_src,dst,imageW*imageH*sizeof(unsigned int));
+
+				for(int x=0; x<imageW; x++)
+				{
+					for(int y=0; y<imageH; y++)
+					{		
+						int match = 0;
+						for (int m = x - mask_w ; m < x + mask_w && !match; m++){
+							for (int n = y - mask_h ; n < y + mask_h && !match; n++){
+								index = (imageW)*n+m;					
+								if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH){
+									if (bw_src[index] == make_color_float(1.0, 1.0, 1.0, 1.0))
+										match = 1;
+								}else{
+									if (bw_src[(imageW)*y+x] == make_color_float(1.0, 1.0, 1.0, 1.0))
+										match = 1;
+									else
+										match = 0;
+								}
+							}
+						}
+						  
+						if(!match)
+						dst[imageW * y + x] = make_color_float(0, 0, 0, 1.0);
+						else
+						dst[imageW * y + x] = make_color_float(1.0, 1.0, 1.0, 1.0);
+									
+					}
+				}
 			}
 		}
 
@@ -527,9 +567,15 @@ float binaryDilationCPU (float4 *src, unsigned int *dst, int imageW, int imageH,
 				for (int m = x - mask_w ; m < x + mask_w && match; m++){
 					for (int n = y - mask_h ; n < y + mask_h && match; n++){
 						index = (imageW)*n+m;					
-						if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH)
+						if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH){
 							if (bw_src[index] == make_color_float(0.0, 0.0, 0.0, 0.0))
 								match = 0;
+						}else{
+							if (bw_src[(imageW)*y+x] == make_color_float(1.0, 1.0, 1.0, 1.0))
+								match = 1;
+							else
+								match = 0;
+						}
 					}
 				}
 				  
@@ -539,6 +585,42 @@ float binaryDilationCPU (float4 *src, unsigned int *dst, int imageW, int imageH,
 				else
 					dst[imageW * y + x] = make_color_float(0, 0, 0, 1.0);
 							
+			}
+		}
+
+		if(iteration > 1)
+		{
+			for(int i=1; i<iteration; i++)
+			{
+				memcpy(bw_src,dst,imageW*imageH*sizeof(unsigned int));
+
+				for(int x=0; x<imageW; x++)
+				{
+					for(int y=0; y<imageH; y++)
+					{		
+						int match = 1;
+						for (int m = x - mask_w ; m < x + mask_w && match; m++){
+							for (int n = y - mask_h ; n < y + mask_h && match; n++){
+								index = (imageW)*n+m;					
+								if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH){
+									if (bw_src[index] == make_color_float(0.0, 0.0, 0.0, 0.0))
+										match = 0;
+								}else{
+									if (bw_src[(imageW)*y+x] == make_color_float(1.0, 1.0, 1.0, 1.0))
+										match = 1;
+									else
+										match = 0;
+								}
+							}
+						}
+						  
+						if(match)
+							dst[imageW * y + x] = make_color_float(1.0, 1.0, 1.0, 1.0);			
+						else
+							dst[imageW * y + x] = make_color_float(0, 0, 0, 1.0);
+									
+					}
+				}
 			}
 		}
 
@@ -572,19 +654,51 @@ float grayErosionCPU (float4 *src, unsigned int *dst, int imageW, int imageH, in
 				for (int m = x - mask_w +1 ; m < x + mask_w -1; m++){
 					for (int n = y - mask_h +1 ; n < y + mask_h -1; n++){
 						index = (imageW)*n+m;					
-						if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH)
+						if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH){
 							new_min = gray_src[index];
 							if (min > new_min)
 								min = new_min;
+						}else{
+							dst[imageW * y + x] = gray_src[(imageW)*y+x];
+						}
 					}
 				}
-				  
-				
+				  				
 				dst[imageW * y + x] = min;
 							
 			}
 		}
 
+	if(iteration > 1)
+	{
+		for(int i=1; i<iteration;i++)
+		{
+			memcpy(gray_src, dst, imageW*imageH*sizeof(unsigned int));
+			for(int x=0; x<imageW; x++)
+			{
+				for(int y=0; y<imageH; y++)
+				{		
+					unsigned int new_min = 0;
+					unsigned int min = gray_src[imageW*y+x];
+					for (int m = x - mask_w +1 ; m < x + mask_w -1; m++){
+						for (int n = y - mask_h +1 ; n < y + mask_h -1; n++){
+							index = (imageW)*n+m;					
+							if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH){
+								new_min = gray_src[index];
+								if (min > new_min)
+									min = new_min;
+							}else{
+								dst[imageW * y + x] = gray_src[(imageW)*y+x];
+							}
+						}
+					}
+					  				
+					dst[imageW * y + x] = min;
+								
+				}
+			}
+		}
+	}
 
 	/* Stop timer */
 	stop = clock();
@@ -628,7 +742,34 @@ float grayDilationCPU (float4 *src, unsigned int *dst, int imageW, int imageH, i
 							
 			}
 		}
-
+	
+	if(iteration > 1)
+	{
+		for(int i=1; i<iteration;i++)
+		{
+			memcpy(gray_src, dst, imageW*imageH*sizeof(unsigned int));
+			for(int x=0; x<imageW; x++)
+			{
+				for(int y=0; y<imageH; y++)
+				{		
+					unsigned int new_max = 0;
+					unsigned int max = gray_src[imageW*y+x];
+					for (int m = x - mask_w +1 ; m < x + mask_w -1; m++){
+						for (int n = y - mask_h +1 ; n < y + mask_h -1; n++){
+							index = (imageW)*n+m;					
+							if(x-mask_w >= 0 && x+mask_w <= imageW && y-mask_h >=0 && y+mask_h <= imageH)
+								new_max = gray_src[index];
+								if (max < new_max)
+									max = new_max;
+						}
+					}
+					  				
+					dst[imageW * y + x] = max;
+								
+				}
+			}
+		}
+	}
 
 	/* Stop timer */
 	stop = clock();
@@ -639,7 +780,7 @@ float grayDilationCPU (float4 *src, unsigned int *dst, int imageW, int imageH, i
 	return t;
 }
 
-float sharpenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, float brightness, float contrast, int adjust)
+float sharpenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, int iteration, float brightness, float contrast, int adjust)
 {
 	float pixel_x = 0;
 	float pixel_y = 0;
@@ -662,6 +803,7 @@ float sharpenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, float 
 
 	int index = 0;
 	float4 *temp = (float4*)malloc(sizeof(float4)*imageW*imageH);
+	float4 *temp2 = (float4*)malloc(sizeof(float4)*imageW*imageH);
 
 	/* Start timer */
 	assert((start = clock())!=-1);
@@ -677,65 +819,74 @@ float sharpenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, float 
 			}
 		}
 
-		for(int i=1; i<imageW-1; i++)
+		for(int i=0; i<iteration;i++)
 		{
-			for(int j=1; j<imageH-1; j++)
+			for(int i=1; i<imageW-1; i++)
 			{
-		
-				pix00 = temp[(imageW)*(j-1)+(i-1)].x;
-				pix01 = temp[(imageW)*(j-1)+i].x;
-				pix02 = temp[(imageW)*(j-1)+(i+1)].x;
-
-				pix10 = temp[(imageW)*j+(i-1)].x;
-				pix11 = temp[(imageW)*j+i].x;
-				pix12 = temp[(imageW)*j+(i+1)].x;
-
-				pix20 = temp[(imageW)*(j+1)+(i-1)].x;
-				pix21 = temp[(imageW)*(j+1)+i].x;
-				pix22 = temp[(imageW)*(j+1)+(i+1)].x;
+				for(int j=1; j<imageH-1; j++)
+				{
 			
-				pixel_x = Highpass(
-					pix00, pix01, pix02, 
-					pix10, pix11, pix12,
-					pix20, pix21, pix22);
+					pix00 = temp[(imageW)*(j-1)+(i-1)].x;
+					pix01 = temp[(imageW)*(j-1)+i].x;
+					pix02 = temp[(imageW)*(j-1)+(i+1)].x;
 
-				pix00 = temp[(imageW)*(j-1)+(i-1)].y;
-				pix01 = temp[(imageW)*(j-1)+i].y;
-				pix02 = temp[(imageW)*(j-1)+(i+1)].y;
+					pix10 = temp[(imageW)*j+(i-1)].x;
+					pix11 = temp[(imageW)*j+i].x;
+					pix12 = temp[(imageW)*j+(i+1)].x;
 
-				pix10 = temp[(imageW)*j+(i-1)].y;
-				pix11 = temp[(imageW)*j+i].y;
-				pix12 = temp[(imageW)*j+(i+1)].y;
+					pix20 = temp[(imageW)*(j+1)+(i-1)].x;
+					pix21 = temp[(imageW)*(j+1)+i].x;
+					pix22 = temp[(imageW)*(j+1)+(i+1)].x;
+				
+					pixel_x = Highpass(
+						pix00, pix01, pix02, 
+						pix10, pix11, pix12,
+						pix20, pix21, pix22);
 
-				pix20 = temp[(imageW)*(j+1)+(i-1)].y;
-				pix21 = temp[(imageW)*(j+1)+i].y;
-				pix22 = temp[(imageW)*(j+1)+(i+1)].y;
-			
-				pixel_y = Highpass(
-					pix00, pix01, pix02, 
-					pix10, pix11, pix12,
-					pix20, pix21, pix22);
+					pix00 = temp[(imageW)*(j-1)+(i-1)].y;
+					pix01 = temp[(imageW)*(j-1)+i].y;
+					pix02 = temp[(imageW)*(j-1)+(i+1)].y;
 
-				pix00 = temp[(imageW)*(j-1)+(i-1)].z;
-				pix01 = temp[(imageW)*(j-1)+i].z;
-				pix02 = temp[(imageW)*(j-1)+(i+1)].z;
+					pix10 = temp[(imageW)*j+(i-1)].y;
+					pix11 = temp[(imageW)*j+i].y;
+					pix12 = temp[(imageW)*j+(i+1)].y;
 
-				pix10 = temp[(imageW)*j+(i-1)].z;
-				pix11 = temp[(imageW)*j+i].z;
-				pix12 = temp[(imageW)*j+(i+1)].z;
+					pix20 = temp[(imageW)*(j+1)+(i-1)].y;
+					pix21 = temp[(imageW)*(j+1)+i].y;
+					pix22 = temp[(imageW)*(j+1)+(i+1)].y;
+				
+					pixel_y = Highpass(
+						pix00, pix01, pix02, 
+						pix10, pix11, pix12,
+						pix20, pix21, pix22);
 
-				pix20 = temp[(imageW)*(j+1)+(i-1)].z;
-				pix21 = temp[(imageW)*(j+1)+i].z;
-				pix22 = temp[(imageW)*(j+1)+(i+1)].z;
-			
-				pixel_z = Highpass(
-					pix00, pix01, pix02, 
-					pix10, pix11, pix12,
-					pix20, pix21, pix22);
+					pix00 = temp[(imageW)*(j-1)+(i-1)].z;
+					pix01 = temp[(imageW)*(j-1)+i].z;
+					pix02 = temp[(imageW)*(j-1)+(i+1)].z;
 
-				dst[(imageW)*j+i] = make_color_float(pixel_x, pixel_y, pixel_z, 1.f);
+					pix10 = temp[(imageW)*j+(i-1)].z;
+					pix11 = temp[(imageW)*j+i].z;
+					pix12 = temp[(imageW)*j+(i+1)].z;
 
+					pix20 = temp[(imageW)*(j+1)+(i-1)].z;
+					pix21 = temp[(imageW)*(j+1)+i].z;
+					pix22 = temp[(imageW)*(j+1)+(i+1)].z;
+				
+					pixel_z = Highpass(
+						pix00, pix01, pix02, 
+						pix10, pix11, pix12,
+						pix20, pix21, pix22);
+
+					temp2[(imageW)*j+i].x = pixel_x;
+					temp2[(imageW)*j+i].y = pixel_y;
+					temp2[(imageW)*j+i].z = pixel_z;
+
+					dst[(imageW)*j+i] = make_color_float(pixel_x, pixel_y, pixel_z, 1.f);
+
+				}
 			}
+
+			memcpy(temp, temp2, imageW*imageH*sizeof(float4));
 		}
 
 	}else{
@@ -807,6 +958,8 @@ float sharpenCPU (float4 *src, unsigned int *dst, int imageW, int imageH, float 
 	/* Stop timer */
 	stop = clock();
 	t = (float) (stop-start)/CLOCKS_PER_SEC;
+
+	free(temp);
 
 	return t;
 }

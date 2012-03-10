@@ -159,18 +159,15 @@ void initGL( int *argc, char **argv )
 	window_menu = GLUI_Master.create_glui("", 0, 50, 50);
 	
 	panel_image = new GLUI_Panel(window_menu, "");
-	window_menu->add_statictext_to_panel(panel_image, "");
 	sprintf(str, "Loaded image: %s", image_file);
 	window_menu->add_statictext_to_panel(panel_image, str);
 	sprintf(str, "Image size: %d x %d", imageW, imageH);
 	window_menu->add_statictext_to_panel(panel_image, str);
-	window_menu->add_statictext_to_panel(panel_image, "");
 
 	panel_filebrowser = new GLUI_Rollout(window_menu, "Browse for image file:", false);
 	file_browser = new GLUI_FileBrowser(panel_filebrowser, "", false, 100, control_cb2);
 				
-	panel_enhancements = new GLUI_Rollout(window_menu, "Image Enhancements", false);
-	window_menu->add_statictext_to_panel(panel_enhancements, "");
+	panel_enhancements = new GLUI_Rollout(window_menu, "Image Enhancements", true);
 
 	//add the spinners	
 	s_brightness = window_menu->add_spinner_to_panel(panel_enhancements, "Brightness", GLUI_SPINNER_FLOAT, &brightness);
@@ -190,11 +187,8 @@ void initGL( int *argc, char **argv )
 	s_iteration->set_float_limits(1, 7);
 	s_box_radius->set_float_limits(1, 6);
 	
-	window_menu->add_statictext_to_panel(panel_enhancements, ""); //newline
-	
 	//add the buttons
 	panel_kernels = new GLUI_Rollout(window_menu, "Image Processing Kernels", true);
-	window_menu->add_statictext_to_panel(panel_kernels, "");
 	window_menu->add_button_to_panel(panel_kernels, "View Image", VIEW_IMAGE, control_cb);
 	window_menu->add_button_to_panel(panel_kernels, "Grayscale", GRAYSCALE, control_cb);
 	window_menu->add_button_to_panel(panel_kernels, "Invert", INVERT, control_cb);
@@ -207,15 +201,11 @@ void initGL( int *argc, char **argv )
 	window_menu->add_button_to_panel(panel_kernels, "Gray Dilation", G_DILATE, control_cb);
 	window_menu->add_button_to_panel(panel_kernels, "Sharpen", SHARPEN, control_cb);
 
-	window_menu->add_statictext_to_panel(panel_kernels, ""); //newline
-	
 	panel_process = new GLUI_Rollout(window_menu, "Processor", true);
-	window_menu->add_statictext_to_panel(panel_process, "");
 	radio_group = window_menu->add_radiogroup_to_panel(panel_process, &processor, 200, control_cb2);	
 	window_menu->add_radiobutton_to_group(radio_group, "Run by GPU"); //processor is 0
 	window_menu->add_radiobutton_to_group(radio_group, "Run by CPU"); //processor is 1
 	runtime_counter = window_menu->add_edittext_to_panel(panel_process, "Runtime (seconds): ", GLUI_EDITTEXT_FLOAT, &cycles );
-	window_menu->add_statictext_to_panel(panel_process, "");
 	
 	window_menu->add_button("QUIT", 0, (GLUI_Update_CB)exit);
 	
@@ -373,11 +363,11 @@ void runByCPU(unsigned int *dst)
 			s_box_radius->disable();
 			break;
 		case 11:
-			t = sharpenCPU(h_FSrc, dst, imageW, imageH, brightness, contrast, 1);	
+			t = sharpenCPU(h_FSrc, dst, imageW, imageH, iteration, brightness, contrast, 1);	
 			glutSetWindowTitle("Sharpened Image - CPU");
 			s_threshold->disable();
 			s_mask_radius->disable();
-			s_iteration->disable();
+			s_iteration->enable();
 			s_box_radius->disable();
 			break;
 
@@ -575,10 +565,6 @@ void display(void){
 
 void runBenchmarkGPU() 
 {
-    printf("\nRunning benchmark on GPU...\n\n");
-
-	printf("\nImage Size: %d x %d\n\n", imageW, imageH);
-    
 	unsigned int *d_img;
 
 	// allocate device memory
@@ -587,6 +573,9 @@ void runBenchmarkGPU()
 
 	// Start round-trip timer and process iCycles loops on the GPU
     const int iCycles = 100;
+
+	printf("\nRunning a %d cycle benchmark on CPU...\n\n", iCycles);
+	printf("\nImage Width: %d Image Height: %d\n\n", imageW, imageH);
 
 	float dProcessingTime = 0.0;
 	for (int i = 0; i < iCycles; i++)
@@ -753,15 +742,17 @@ void runBenchmarkGPU()
 
 void runBenchmarkCPU() 
 {
-    printf("\nRunning benchmark on CPU...\n\n");
-	printf("Image Width: %d, Image Height: %d\n\n", imageW, imageH);
-
 	unsigned int *d_img;
 
 	d_img = (unsigned int*)malloc(sizeof(unsigned int)*imageH*imageW);	
    
 	// Start round-trip timer and process iCycles loops on the GPU
     const int iCycles = 100;
+
+	printf("\nRunning a %d cycle benchmark on CPU...\n\n", iCycles);
+	printf("Image Width: %d, Image Height: %d\n\n", imageW, imageH);
+
+
     double dProcessingTime = 0.0;
 	for (int i = 0; i < iCycles; i++)
     {
@@ -831,6 +822,19 @@ void runBenchmarkCPU()
 	dProcessingTime = 0.0;
 	for (int i = 0; i < iCycles; i++)
     {
+        dProcessingTime += smoothenCPU(h_FSrc, d_img, imageW, imageH, box_radius, iteration, brightness, contrast, 0);
+    }
+
+    // check if kernel execution generated an error and sync host
+    cutilCheckMsg("Error: Kernel execution FAILED");
+    // Get average computation time
+    dProcessingTime /= (double)iCycles;
+	
+	printf("Processing Time of Mean Filtering Technique: %.5f\n\n", dProcessingTime);
+
+	dProcessingTime = 0.0;
+	for (int i = 0; i < iCycles; i++)
+    {
         dProcessingTime += binarizeCPU(h_FSrc, d_img, imageW, imageH, threshold, brightness, contrast, 0);
     }
 
@@ -896,7 +900,7 @@ void runBenchmarkCPU()
 	dProcessingTime = 0.0;
 	for (int i = 0; i < iCycles; i++)
     {
-        dProcessingTime += sharpenCPU(h_FSrc, d_img, imageW, imageH, brightness, contrast, 0);	
+        dProcessingTime += sharpenCPU(h_FSrc, d_img, imageW, imageH, iteration, brightness, contrast, 0);	
     }
 
 	// check if kernel execution generated an error and sync host
