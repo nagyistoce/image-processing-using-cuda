@@ -26,7 +26,7 @@ GLuint shader;
 struct cudaGraphicsResource *cuda_pbo_resource; // handles OpenGL-CUDA exchange
 
 #define BUFFER_DATA(i) ((char *)0 + i)
-const char *image_file = "images/sample2.jpg"; //sample 5 higher results to an error
+const char *image_file = "images/AutumnDreams.jpg"; //sample 5 higher results to an error
 std::string loaded_file_name;
 char *image_format;
 int  processing_Kernel = 1;
@@ -572,7 +572,7 @@ void runBenchmarkGPU()
     CUDA_BindTexture(); 
 
 	// Start round-trip timer and process iCycles loops on the GPU
-    const int iCycles = 100;
+    const int iCycles = 10;
 
 	printf("\nRunning a %d cycle benchmark on CPU...\n\n", iCycles);
 	printf("\nImage Width: %d Image Height: %d\n\n", imageW, imageH);
@@ -747,7 +747,7 @@ void runBenchmarkCPU()
 	d_img = (unsigned int*)malloc(sizeof(unsigned int)*imageH*imageW);	
    
 	// Start round-trip timer and process iCycles loops on the GPU
-    const int iCycles = 100;
+    const int iCycles = 10;
 
 	printf("\nRunning a %d cycle benchmark on CPU...\n\n", iCycles);
 	printf("Image Width: %d, Image Height: %d\n\n", imageW, imageH);
@@ -965,17 +965,8 @@ int main(int argc, char **argv)
 		CUDA_BindTexture();
 		runBenchmarkCPU();
 		getchar();
-		getchar();
 
-	}else{		
-		cutilSafeCall( CUDA_FreeArray() );
-		cudaFree(d_temp);
-		free(h_Src);		
-		free(h_FSrc);		
-		cutilExit(argc, argv);
-		cudaThreadExit();
-		exit(0);
-	}		
+	}
 
 	cutilSafeCall( CUDA_FreeArray() );
 	cudaFree(d_temp);
@@ -983,5 +974,6 @@ int main(int argc, char **argv)
 	free(h_FSrc);		
 	cutilExit(argc, argv);
 	cudaThreadExit();
+	exit(0);
 	
 }
