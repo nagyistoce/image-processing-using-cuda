@@ -3,6 +3,8 @@ __device__ float highpass (float p00, float p01, float p02,
 					  float p20, float p21, float p22) 
 {
 	float result = (9*p11 -p00 -p01 -p02 -p10 -p12 -p20 -p21 -p22);
+	//float result = (4*p00+(-4)*p22);	
+	//float result = -p00 - p01 + p02 - p10 - p11 + p12 + p20 + p21 + p22;
 	if(result< 0.f) return 0.f; else if(result>1.0f) return 1.0f;
 	return result;
 }

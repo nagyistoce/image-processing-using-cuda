@@ -26,7 +26,7 @@ GLuint shader;
 struct cudaGraphicsResource *cuda_pbo_resource; // handles OpenGL-CUDA exchange
 
 #define BUFFER_DATA(i) ((char *)0 + i)
-const char *image_file = "images/AutumnDreams.jpg"; //sample 5 higher results to an error
+const char *image_file = "images/barkadapic.jpg"; //sample 5 higher results to an error
 std::string loaded_file_name;
 char *image_format;
 int  processing_Kernel = 1;
@@ -100,7 +100,7 @@ void control_cb2( int control )
 		//get the file extension
 		//int index = loaded_file_name.find_last_of("/", loaded_file_name.length());
 		//printf("Last Index of /: %d\n", index);
-		loaded = true;		
+		loaded = true;
 	}else if(control == 400){
 		mask_w = mask_radius/2;
 		mask_h = mask_radius/2;
@@ -134,7 +134,7 @@ void initGL( int *argc, char **argv )
 			do{
 				temp = (int)imageW/(ratio*counter);
 				counter++;
-			}while(temp>screenW-100);
+			}while(temp>screenW-250);
 			
 			glutInitWindowSize((int)imageW/(ratio*counter), (int)imageH/(ratio*counter));	
 
@@ -145,7 +145,7 @@ void initGL( int *argc, char **argv )
 			do{
 				temp = (int)imageH/(ratio*counter);
 				counter++;
-			}while(temp>screenH);
+			}while(temp>screenH-250);
 			
 			glutInitWindowSize((int)imageW/(ratio*counter), (int)imageH/(ratio*counter));	
 		}
@@ -522,7 +522,7 @@ void display(void){
 		glutReshapeWindow(imageW, imageH);
 		cutilSafeCall( CUDA_MallocArray(&h_Src, imageW, imageH) );				
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, imageW, imageH, 0, GL_RGBA, GL_UNSIGNED_BYTE, h_Src);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, imageW * imageH * 4, h_Src, GL_STREAM_DRAW_ARB);		
+		glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, imageW * imageH * 4, h_Src, GL_STREAM_DRAW_ARB);	
 	}
 
 	//call function for launching the kernels	
