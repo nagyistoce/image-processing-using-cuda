@@ -1,0 +1,1 @@
+The project is written in C++. CUDA, OpenGL, GLut and SDL were used. SDL was the library used in loading the image file. OpenGL and GLut for rendering the texture containing the processed image. CUDA for writing the image processing kernels.
